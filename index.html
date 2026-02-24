@@ -1108,7 +1108,7 @@
                     <!-- Buttons -->
                     <div class="btn-row">
                         <button class="btn btn-gold" onclick="saveToCalendar()">📆 Save the Date</button>
-                        <button class="btn btn-outline" onclick="getDirections()">🗺️ Get Directions</button>
+                        <button class="btn btn-outline" onclick="openLocation()">🗺️ Get Directions</button>
                         <button class="btn btn-outline" onclick="shareInvite()">💬 Share Invite</button>
                     </div>
                 </div>
@@ -1446,11 +1446,18 @@
             a.click();
             URL.revokeObjectURL(url);
         }
+        const locationAddress = "GWCQ+64F Amman Venue Hall / அம்மன் திருமண மண்டபம், Vaikundam, Tamil Nadu 637103";
 
-        function getDirections() {
-            const query = encodeURIComponent('Sree Amman Mandapam, Vaikuntham, Sangakiri, Salem');
+        function openLocation() {
+            const query = encodeURIComponent(locationAddress);
             window.open(`https://www.google.com/maps/search/?api=1&query=${query}`, '_blank');
         }
+
+
+        // function getDirections() {
+        //     const query = encodeURIComponent('Sree Amman Mandapam, Vaikuntham, Sangakiri, Salem');
+        //     window.open(`https://www.google.com/maps/search/?api=1&query=${query}`, '_blank');
+        // }
 
         function shareInvite() {
             const msg = encodeURIComponent(
