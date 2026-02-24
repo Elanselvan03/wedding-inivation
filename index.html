@@ -94,13 +94,44 @@
             border-radius: 99px;
             margin-top: 1.5rem;
             overflow: hidden;
+            transition: opacity 0.5s ease;
         }
 
         .loader-bar {
             height: 100%;
             background: linear-gradient(90deg, var(--maroon), var(--gold), var(--maroon2));
-            animation: loadBar 2.5s ease-in-out forwards;
+            animation: loadBar 2s ease-in-out forwards;
             border-radius: 99px;
+        }
+
+        .loader-open-btn {
+            margin-top: 2.5rem;
+            padding: 14px 44px;
+            font-size: 1.1rem;
+            font-family: 'Cinzel', serif;
+            letter-spacing: 3px;
+            background: linear-gradient(135deg, var(--gold), var(--gold2), var(--gold));
+            color: var(--deep);
+            font-weight: 700;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(20px);
+            transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 5px 20px rgba(212, 175, 55, 0.3);
+        }
+
+        .loader-open-btn.show {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .loader-open-btn:hover {
+            transform: translateY(-3px) scale(1.03);
+            box-shadow: 0 10px 30px rgba(212, 175, 55, 0.5);
         }
 
         @keyframes loadBar {
@@ -904,6 +935,11 @@
 
 <body>
 
+    <!-- ===== LOCAL BACKGROUND AUDIO PLAYER ===== -->
+    <audio autoplay loop>
+        <source src="tamil-cut-song.mp3" type="audio/mpeg">
+      </audio>
+      
     <!-- ===== CANVAS LAYERS ===== -->
     <canvas id="particleCanvas"></canvas>
     <canvas id="fireworkCanvas"></canvas>
@@ -915,13 +951,14 @@
         <p
             style="font-family:'Cormorant Garamond',serif;font-style:italic;color:rgba(255,235,180,0.7);margin-top:6px;font-size:1.1rem;">
             Wedding Reception Invitation</p>
-        <div class="loader-bar-wrap">
+        <div class="loader-bar-wrap" id="loaderBarWrap">
             <div class="loader-bar"></div>
         </div>
+        <button class="loader-open-btn" id="openInviteBtn">Open Invitation</button>
     </div>
 
-    <!-- ===== MUSIC BUTTON ===== -->
-    <button id="musicBtn" title="Toggle Music" aria-label="Toggle background music">🎵</button>
+    <!-- ===== MUSIC BUTTON (Hidden per user request, auto-playing) ===== -->
+    <button id="musicBtn" style="display: none;" title="Toggle Music" aria-label="Toggle background music">🎵</button>
 
     <!-- ===== FLOATING ROSE PETALS ===== -->
     <div id="petals-container"></div>
@@ -1123,14 +1160,63 @@
 
     <script>
         /* ================================================
-           LOADER
+           LOADER & WELCOME OVERLAY
         ================================================ */
+        let isMusicOn = true;
+        const audioPlayer = document.getElementById('bg-audio');
+
         window.addEventListener('load', () => {
+            // Wait for loader bar to finish (approx 2s), then fade it out and show "Open" button
             setTimeout(() => {
-                document.getElementById('loader').classList.add('hidden');
-                startFireworks();
-                createPetals();
-            }, 2800);
+                const barWrap = document.getElementById('loaderBarWrap');
+                const openBtn = document.getElementById('openInviteBtn');
+                if (barWrap) {
+                    barWrap.style.opacity = '0';
+                    setTimeout(() => {
+                        barWrap.style.display = 'none';
+                        if (openBtn) openBtn.classList.add('show');
+                    }, 500);
+                }
+            }, 2100);
+        });
+
+        // Handle user clicking "Open Invitation"
+        document.getElementById('openInviteBtn').addEventListener('click', () => {
+            document.getElementById('loader').classList.add('hidden');
+
+            // Interaction received, play music now!
+            if (audioPlayer) {
+                audioPlayer.volume = 0.85;
+                audioPlayer.play().catch(e => console.log("Audio not played", e));
+                isMusicOn = true;
+            }
+
+            startFireworks();
+            createPetals();
+        });
+
+        /* ================================================
+           BACKGROUND MUSIC — Local Audio File
+           Requires a file named "Tamil Cut Song Download.mp3"
+        ================================================ */
+        function startMusic() {
+            if (audioPlayer && audioPlayer.paused) {
+                audioPlayer.volume = 0.85;
+                audioPlayer.play().then(() => {
+                    isMusicOn = true;
+                }).catch(e => {
+                    console.log("Audio playback was prevented by the browser.");
+                    isMusicOn = false;
+                });
+            }
+        }
+
+        // Browsers block autoplay without prior user interaction.
+        // This attempts to start music on the first click anywhere on the page if it hasn't started yet.
+        document.body.addEventListener('click', () => {
+            if (!isMusicOn || (audioPlayer && audioPlayer.paused)) {
+                startMusic();
+            }
         });
 
         /* ================================================
@@ -1332,123 +1418,7 @@
         }, { threshold: 0.18 });
         revealEls.forEach(el => io.observe(el));
 
-        /* ================================================
-           BACKGROUND MUSIC — Web Audio API (Indian Sitar/Bells)
-        ================================================ */
-        let audioCtx = null;
-        let isMusicOn = false;
-        let musicNodes = [];
-        let musicLoop = null;
-
-        const musicBtn = document.getElementById('musicBtn');
-
-        // A simple pentatonic / Indian-inspired melody in A minor pentatonic
-        // Frequencies in Hz
-        const pentatonic = [261.63, 293.66, 329.63, 392.00, 440.00, 523.25, 587.33, 659.25, 784.00, 880.00];
-        const melody = [
-            // Root movement: gentle, romantic Indian classical-inspired
-            { freq: 440.00, dur: 0.6 },
-            { freq: 392.00, dur: 0.4 },
-            { freq: 329.63, dur: 0.5 },
-            { freq: 293.66, dur: 0.3 },
-            { freq: 261.63, dur: 0.8 },
-            { freq: 293.66, dur: 0.35 },
-            { freq: 329.63, dur: 0.45 },
-            { freq: 392.00, dur: 0.35 },
-            { freq: 440.00, dur: 0.5 },
-            { freq: 523.25, dur: 0.45 },
-            { freq: 587.33, dur: 0.35 },
-            { freq: 523.25, dur: 0.5 },
-            { freq: 440.00, dur: 0.5 },
-            { freq: 392.00, dur: 0.4 },
-            { freq: 329.63, dur: 0.4 },
-            { freq: 261.63, dur: 1.0 },
-        ];
-
-        function playNote(ctx, freq, startTime, duration, vol = 0.12) {
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-
-            // Sitar-like timbre: sawtooth + slight detuning
-            osc.type = 'triangle';
-            osc.frequency.setValueAtTime(freq, startTime);
-            // Subtle vibrato
-            osc.frequency.setValueAtTime(freq, startTime + duration * 0.3);
-            osc.frequency.linearRampToValueAtTime(freq * 1.005, startTime + duration * 0.5);
-            osc.frequency.linearRampToValueAtTime(freq, startTime + duration * 0.8);
-
-            gain.gain.setValueAtTime(0, startTime);
-            gain.gain.linearRampToValueAtTime(vol, startTime + 0.04);
-            gain.gain.setValueAtTime(vol, startTime + duration * 0.6);
-            gain.gain.linearRampToValueAtTime(0, startTime + duration);
-
-            osc.connect(gain);
-            gain.connect(ctx.destination);
-            osc.start(startTime);
-            osc.stop(startTime + duration);
-            return osc;
-        }
-
-        function playDrone(ctx, freq) {
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-            osc.type = 'sine';
-            osc.frequency.value = freq;
-            gain.gain.value = 0.04;
-            osc.connect(gain);
-            gain.connect(ctx.destination);
-            osc.start();
-            musicNodes.push(osc, gain);
-            return osc;
-        }
-
-        function scheduleMelody(ctx) {
-            let t = ctx.currentTime + 0.1;
-            const melodyDuration = melody.reduce((s, n) => s + n.dur, 0);
-
-            function scheduleLoop() {
-                if (!isMusicOn) return;
-                for (const note of melody) {
-                    playNote(ctx, note.freq, t, note.dur);
-                    // Harmony (lower octave)
-                    playNote(ctx, note.freq / 2, t, note.dur, 0.05);
-                    t += note.dur + 0.05;
-                }
-                // Schedule next loop
-                musicLoop = setTimeout(scheduleLoop, (melodyDuration + 0.5) * 1000);
-            }
-            scheduleLoop();
-        }
-
-        function startMusic() {
-            if (!audioCtx) {
-                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            }
-            // Drone on root note A
-            playDrone(audioCtx, 110); // A2
-            playDrone(audioCtx, 55);  // A1
-
-            scheduleMelody(audioCtx);
-            isMusicOn = true;
-            musicBtn.textContent = '🔊';
-        }
-
-        function stopMusic() {
-            isMusicOn = false;
-            clearTimeout(musicLoop);
-            musicNodes.forEach(n => { try { n.stop && n.stop(); n.disconnect && n.disconnect(); } catch (e) { } });
-            musicNodes = [];
-            if (audioCtx) { audioCtx.close(); audioCtx = null; }
-            musicBtn.textContent = '🎵';
-        }
-
-        musicBtn.addEventListener('click', () => {
-            if (isMusicOn) {
-                stopMusic();
-            } else {
-                startMusic();
-            }
-        });
+        /* (End of file JS) */
 
         /* ================================================
            ACTION BUTTONS
